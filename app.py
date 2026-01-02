@@ -5,7 +5,8 @@ from flask_restful import Api, Resource
 from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from flask_cors import CORS
 from werkzeug.security import check_password_hash,generate_password_hash
-import os
+import os,secrets, datetime
+from datetime import timedelta
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -15,6 +16,10 @@ app = Flask(__name__)
 CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] =secrets.token_hex(32)
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
+
 migrate = Migrate(app, db)
 
 db.init_app(app)
@@ -49,7 +54,23 @@ api.add_resource(Signup,'/signup')
 
 
 
+class Login(Resource):
+    def post(self):
+        data=request.get_json()
+        email=data.get("email")
+        password=data.get("password")
+        if "@" in email and password:
+            user=User.query.filter_by(email=email).first()
+            if user:
+                if check_password_hash(user.password,password):
+                    access_token=create_access_token(identity=user.id)
+                    refresh_token=create_refresh_token(identity=user.id)
+                    return make_response({"user":user.to_dict(),"access_token":access_token,"refresh_token":refresh_token},200)
+                return make_response({"msg":"Incorrect password"},400)
+            return make_response({"msg":"email not registered"},404)
+        return make_response({"msg":"Invalid data"})
 
+api.add_resource(Login,"/login")
 
 
 
