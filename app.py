@@ -80,6 +80,38 @@ class Get_users(Resource):
         return make_response([user.to_dict() for user in users],200)
 api.add_resource(Get_users,"/users")
 
+class Get_user(Resource):
+    def get(self,id):
+        user=User.query.filter_by(id=id).first()
+        if user:
+            return make_response(user.to_dict(),200)
+        return make_response({"msg":"user not found"},404)
+    
+    def patch(self,id):
+        user=User.query.filter_by(id=id).first()
+        if user:
+            data=request.get_json()
+            for attr in data:
+                if attr in ['first_name','last_name','email','role']:
+                    setattr(user,attr,data.get(attr))
+                    
+                if "password" in data:
+                    user.password=generate_password_hash(data['password'])
+                db.session.add(user)
+                db.session.commit()
+            return make_response(user.to_dict(),200)
+        return make_response({"msg":"user not found"})
+    
+    
+    def delete(self,id):
+        user=User.query.filter_by(id=id).first()
+        if user:
+            db.session.delete(user)
+            db.session.commit()
+            return make_response({"msg":f"user{user} deleted successfully"})
+        return make_response({"msg":f"user {user} not found"})
+    
+api.add_resource(Get_user,'/user/<int:id>')
         
 
 
