@@ -1,4 +1,4 @@
-from models import db, User
+from models import db, User, Patient
 from flask_migrate import Migrate
 from flask import Flask, request, make_response, jsonify
 from flask_restful import Api, Resource
@@ -112,6 +112,16 @@ class Get_user(Resource):
         return make_response({"msg":f"user {user} not found"})
     
 api.add_resource(Get_user,'/user/<int:id>')
+
+
+class Get_patients(Resource):
+    def get(self):
+        patients=Patient.query.all()
+        if patients:
+            return make_response([patient.to_dict() for patient in patients])
+        return make_response({"msg":"No patient records found"})
+    
+api.add_resource(Get_patients,'/patients')
         
 
 
