@@ -72,9 +72,15 @@ class Login(Resource):
 
 api.add_resource(Login,"/login")
 
+# query all users, specific user, crud patients
 
+class Get_users(Resource):
+    def get(self):
+        users=User.query.all()
+        return make_response([user.to_dict() for user in users],200)
+api.add_resource(Get_users,"/users")
 
-
+        
 
 
 
