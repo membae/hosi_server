@@ -165,6 +165,8 @@ class Patient_by_Id(Resource):
         return make_response({"msg":"patient not found"})
     
 api.add_resource(Patient_by_Id,'/patient/<int:id>')
+
+
         
 
 
