@@ -124,7 +124,7 @@ class Get_patients(Resource):
     def post(self):
         data=request.get_json()
         if "first_name" in data and "last_name" in data and "phone_number" in data and "doctor_summary" in data and "status" in data and "admitted_at" in data or "discharged_at" in data and "diagnosis" in data:
-            new_patient=Patient(first_name=data.get("first_name"),last_name=data.get("last_name"),phone_number=data.get("phone_number"),doctor_summary=data.get("doctor_summary"),status=data.get("status"),admitted_at = datetime.fromisoformat(data["admitted_at"]),discharged_at=data.get("discharged_at"), diagnosis =data.get("diagnosis"))
+            new_patient=Patient(first_name=data.get("first_name"),last_name=data.get("last_name"),phone_number=data.get("phone_number"),doctor_summary=data.get("doctor_summary"),status=data.get("status"),admitted_at = datetime.fromisoformat(data["admitted_at"]),discharged_at = datetime.fromisoformat(data["discharged_at"]), diagnosis =data.get("diagnosis"))
             db.session.add(new_patient)
             db.session.commit()
             return make_response(new_patient.to_dict(),201)
@@ -140,7 +140,31 @@ class Patient_by_Id(Resource):
         return make_response({"msg":"patient not found"},404)
     
     def patch(self,id):
-        pass
+        patient=Patient.query.filter_by(id=id).first()
+        if patient:
+            data=request.get_json()
+            for attr in data:
+                if attr in['first_name','last_name','phone_number','diagnosis','doctor_summary','admitted_at','discharged_at','status']:
+                    setattr(patient,attr,data.get(attr))
+            if "admitted_at" in data :
+                patient.admitted_at = datetime.fromisoformat(data["admitted_at"])
+            if "discharged_at" in data :
+                patient.discharged_at = datetime.fromisoformat(data["discharged_at"])  
+            
+            db.session.add(patient)
+            db.session.commit()
+            return make_response(patient.to_dict(),200)            
+        return make_response ({"msg":"patient not found"})
+    
+    def delete(self,id):
+        patient=Patient.query.filter_by(id=id).first()
+        if patient:
+            db.session.delete(patient)
+            db.session.commit()
+            return make_response({"msg":"patient deleted successfully"},200)
+        return make_response({"msg":"patient not found"})
+    
+api.add_resource(Patient_by_Id,'/patient/<int:id>')
         
 
 
