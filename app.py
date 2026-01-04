@@ -1,4 +1,4 @@
-from models import db, User, Patient
+from models import db, User, Patient, Appointment
 from flask_migrate import Migrate
 from flask import Flask, request, make_response, jsonify
 from flask_restful import Api, Resource
@@ -166,7 +166,34 @@ class Patient_by_Id(Resource):
     
 api.add_resource(Patient_by_Id,'/patient/<int:id>')
 
-
+class Get_appointments(Resource):
+    def get(self):
+        appointments=Appointment.query.all()
+        if appointments:
+            return make_response([appointment.to_dict() for appointment in appointments],200)
+        return make_response({"msg":"No appointment records found"},404)
+    
+    def post(self):
+        data=request.get_json()
+        if not data:
+            return make_response({"msg":"no data provided"})
+        
+        if 'appointment_datetime' in data and 'status' in data and 'reason' in data and 'patient_id' in data and 'user_id' in data :
+            patient=Patient.query.get(data['patient_id'])
+            user=User.query.get(data['user_id'])
+            if not patient:
+                return make_response({"msg":"patient does not exist"},404)
+            if not user:
+                return make_response({"msg":"user does not exist"},404)
+            new_appointment=Appointment(appointment_datetime=datetime.fromisoformat(
+                data["appointment_datetime"]), status=data.get('status'), reason=data.get('reason'), patient_id=data.get('patient_id'), user_id=data.get('user_id'))
+            
+            db.session.add(new_appointment)
+            db.session.commit()
+            return make_response(new_appointment.to_dict(),201)
+        return make_response({"msg":"field missing"},400)
+    
+api.add_resource(Get_appointments,'/appointments')
         
 
 

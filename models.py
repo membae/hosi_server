@@ -16,7 +16,9 @@ class User(db.Model, SerializerMixin):
     password=db.Column(db.String, nullable=False)
     role=db.Column(db.String, default="Admin", nullable=False)
     
-    appointments=db.relationship("Appointment",back_populates="users", cascade="all, delete-orphan")
+    appointments=db.relationship("Appointment",back_populates="user", cascade="all, delete-orphan")
+    
+    serialize_rules = ("-appointments.user",)
     
 class Patient(db.Model, SerializerMixin):
     __tablename__="patients"
@@ -30,7 +32,9 @@ class Patient(db.Model, SerializerMixin):
     admitted_at=db.Column(db.DateTime, nullable=True)
     discharged_at=db.Column(db.DateTime, nullable=True)
     
-    appointments=db.relationship("Appointment", back_populates="patients", cascade="all, delete-orphan")
+    appointments=db.relationship("Appointment", back_populates="patient", cascade="all, delete-orphan")
+    
+    serialize_rules = ("-appointments.patient",)
     
     
 class Appointment(db.Model, SerializerMixin):
@@ -41,11 +45,13 @@ class Appointment(db.Model, SerializerMixin):
     status=db.Column(db.String, nullable=False)
     reason=db.Column(db.String, nullable=False)
     
-    patient_id=db.Column(db.Integer, db.ForeignKey('patients.id'))
-    user_id=db.Column(db.Integer, db.ForeignKey('users.id'))
+    patient_id=db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
+    user_id=db.Column(db.Integer, db.ForeignKey('users.id'),nullable=False)
     
-    patients=db.relationship("Patient",back_populates="appointments")
-    users=db.relationship("User", back_populates="appointments")
+    patient=db.relationship("Patient",back_populates="appointments")
+    user=db.relationship("User", back_populates="appointments")
+    
+    serialize_rules = ("-user.appointments", "-patient.appointments")
     
         
               
