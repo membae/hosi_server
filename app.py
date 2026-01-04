@@ -6,7 +6,7 @@ from flask_jwt_extended import JWTManager, create_access_token, create_refresh_t
 from flask_cors import CORS
 from werkzeug.security import check_password_hash,generate_password_hash
 import os,secrets, datetime
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -121,7 +121,26 @@ class Get_patients(Resource):
             return make_response([patient.to_dict() for patient in patients])
         return make_response({"msg":"No patient records found"})
     
+    def post(self):
+        data=request.get_json()
+        if "first_name" in data and "last_name" in data and "phone_number" in data and "doctor_summary" in data and "status" in data and "admitted_at" in data or "discharged_at" in data and "diagnosis" in data:
+            new_patient=Patient(first_name=data.get("first_name"),last_name=data.get("last_name"),phone_number=data.get("phone_number"),doctor_summary=data.get("doctor_summary"),status=data.get("status"),admitted_at = datetime.fromisoformat(data["admitted_at"]),discharged_at=data.get("discharged_at"), diagnosis =data.get("diagnosis"))
+            db.session.add(new_patient)
+            db.session.commit()
+            return make_response(new_patient.to_dict(),201)
+        return make_response({"msg":"Missing data"},400)
+    
 api.add_resource(Get_patients,'/patients')
+
+class Patient_by_Id(Resource):
+    def get(self,id):
+        patient=Patient.query.filter_by(id=id).first()
+        if patient:
+            return make_response(patient.to_dict(),200)
+        return make_response({"msg":"patient not found"},404)
+    
+    def patch(self,id):
+        pass
         
 
 
