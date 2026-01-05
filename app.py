@@ -193,7 +193,47 @@ class Get_appointments(Resource):
             return make_response(new_appointment.to_dict(),201)
         return make_response({"msg":"field missing"},400)
     
-api.add_resource(Get_appointments,'/appointments')
+api.add_resource(Get_appointments,'/appointment')
+
+class Appointment_byId(Resource):
+    def get(self,id):
+        appointment=Appointment.query.filter_by(id=id).first()
+        if appointment:
+            return make_response(appointment.to_dict(),200)
+        return make_response({"msg":"appointment not found"})
+    
+    
+    def patch(self,id):
+        appointment=Appointment.query.filter_by(id=id).first()
+        if appointment:
+            data=request.get_json()
+            for attr in data:
+                if attr in ['appointment_datetime','status','reason']:
+                    setattr(appointment,attr,data.get(attr))
+                if attr == "patient_id":
+                    patient = db.session.get(Patient, data[attr])
+                    if not patient:
+                        return make_response({"msg": "patient does not exist"}, 404)
+
+                if attr == "user_id":
+                    user = db.session.get(User, data[attr])
+                    if not user:
+                        return make_response({"msg": "user does not exist"}, 404)
+                db.session.add(appointment)
+                db.session.commit()
+                return make_response(appointment.to_dict(),200)
+        return make_response({"msg":"appointment not found"},404)
+
+    def delete(self,id):
+        appointment=Appointment.query.filter_by(id=id).first()
+        if appointment:
+            db.session.delete(appointment)
+            db.session.commit()
+            return make_response({"msg":"appointment deleted successfully"},200)
+        return make_response({"msg":"appointment not found"})
+    
+api.add_resource(Appointment_byId,'/appointment/<int:id>')
+        
         
 
 
