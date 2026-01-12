@@ -20,7 +20,7 @@ class User(db.Model, SerializerMixin):
     appointments=db.relationship("Appointment",back_populates="user", cascade="all, delete-orphan")
     reports=db.relationship("Report",back_populates='user')
     
-    serialize_rules = ("-appointments.user",)
+    serialize_rules = ("-appointments", "-reports")
     
 class Patient(db.Model, SerializerMixin):
     __tablename__="patients"
@@ -37,7 +37,7 @@ class Patient(db.Model, SerializerMixin):
     appointments=db.relationship("Appointment", back_populates="patient", cascade="all, delete-orphan")
     reports=db.relationship('Report', back_populates='patient', cascade='all, delete-orphan')
     
-    serialize_rules = ("-appointments.patient",)
+    serialize_rules = ("-appointments", "-reports")
     
     
 class Appointment(db.Model, SerializerMixin):
@@ -54,7 +54,7 @@ class Appointment(db.Model, SerializerMixin):
     patient=db.relationship("Patient",back_populates="appointments")
     user=db.relationship("User", back_populates="appointments")
     
-    serialize_rules = ("-user.appointments", "-patient.appointments")
+    serialize_rules = ("-patient", "-user")
     
 class Report(db.Model,SerializerMixin):
     __tablename__='reports'
@@ -67,6 +67,8 @@ class Report(db.Model,SerializerMixin):
     
     patient=db.relationship("Patient", back_populates='reports')
     user=db.relationship("User", back_populates='reports')
+    
+    serialize_rules = ("-patient", "-user")
     
     
         

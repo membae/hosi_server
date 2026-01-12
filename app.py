@@ -1,4 +1,4 @@
-from models import db, User, Patient, Appointment
+from models import db, User, Patient, Appointment, Report
 from flask_migrate import Migrate
 from flask import Flask, request, make_response, jsonify
 from flask_restful import Api, Resource
@@ -252,6 +252,32 @@ class Appointment_byId(Resource):
         return make_response({"msg":"appointment not found"})
     
 api.add_resource(Appointment_byId,'/appointment/<int:id>')
+
+class GetReports(Resource):
+    def get(self):
+        reports=Report.query.all()
+        return make_response([report.to_dict() for report in reports],200)
+    
+    def post(self):
+        data=request.get_json()
+        if not data:
+            return make_response({"msg":"no data provided"},400)
+        if "patient_id" in data and "user_id" in data and "diagnosis" in data:
+            patient=Patient.query.get(data['patient_id'])
+            user=User.query.get(data['user_id'])
+            if not patient:
+                return make_response({"msg":"patient does not exist"},404)
+            if not user:
+                return make_response({"msg":"user does not exist"},404)
+            new_report=Report(patient_id=data.get("patient_id"), user_id=data.get("user_id"),diagnosis=data.get("diagnosis"))
+            db.session.add(new_report)
+            db.session.commit()
+            return make_response(new_report.to_dict(),201)
+        return make_response({"msg":"Missing field"},400)
+    
+    
+    
+api.add_resource( GetReports, "/reports")
         
         
 
