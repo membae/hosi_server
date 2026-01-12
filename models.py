@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from sqlalchemy_serializer import SerializerMixin
+from datetime import datetime
 
 metadata= MetaData()
 db=SQLAlchemy(metadata=metadata)
@@ -17,6 +18,7 @@ class User(db.Model, SerializerMixin):
     role=db.Column(db.String, default="Admin", nullable=False)
     
     appointments=db.relationship("Appointment",back_populates="user", cascade="all, delete-orphan")
+    reports=db.relationship("Report",back_populates='user')
     
     serialize_rules = ("-appointments.user",)
     
@@ -33,6 +35,7 @@ class Patient(db.Model, SerializerMixin):
     discharged_at=db.Column(db.DateTime, nullable=True)
     
     appointments=db.relationship("Appointment", back_populates="patient", cascade="all, delete-orphan")
+    reports=db.relationship('Report', back_populates='patient', cascade='all, delete-orphan')
     
     serialize_rules = ("-appointments.patient",)
     
@@ -52,6 +55,19 @@ class Appointment(db.Model, SerializerMixin):
     user=db.relationship("User", back_populates="appointments")
     
     serialize_rules = ("-user.appointments", "-patient.appointments")
+    
+class Report(db.Model,SerializerMixin):
+    __tablename__='reports'
+    
+    id=db.Column(db.Integer, primary_key=True)
+    patient_id=db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
+    user_id=db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    diagnosis=db.Column(db.String, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    patient=db.relationship("Patient", back_populates='reports')
+    user=db.relationship("User", back_populates='reports')
+    
     
         
               

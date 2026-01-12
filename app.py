@@ -97,8 +97,8 @@ class Get_user(Resource):
                     
                 if "password" in data:
                     user.password=generate_password_hash(data['password'])
-                db.session.add(user)
-                db.session.commit()
+            db.session.add(user)
+            db.session.commit()
             return make_response(user.to_dict(),200)
         return make_response({"msg":"user not found"})
     
@@ -169,9 +169,8 @@ api.add_resource(Patient_by_Id,'/patient/<int:id>')
 class Get_appointments(Resource):
     def get(self):
         appointments=Appointment.query.all()
-        if appointments:
-            return make_response([appointment.to_dict() for appointment in appointments],200)
-        return make_response({"msg":"No appointment records found"},404)
+        return make_response([appointment.to_dict() for appointment in appointments],200)
+        # return make_response({"msg":"No appointment records found"},404)
     
     def post(self):
         data=request.get_json()
@@ -197,18 +196,38 @@ api.add_resource(Get_appointments,'/appointment')
 
 class Appointment_byId(Resource):
     def get(self,id):
-        appointment=Appointment.query.filter_by(id=id).first()
-        if appointment:
-            return make_response(appointment.to_dict(),200)
-        return make_response({"msg":"appointment not found"})
+        appointments = Appointment.query.all()
+        if not appointments:
+            return make_response({"msg": "No appointment records found"}, 404)
+
+        result = []
+        for appointment in appointments:
+            data = appointment.to_dict()  # keep IDs
+            data["patient_name"] = (
+                f"{appointment.patient.first_name} {appointment.patient.last_name}"
+                if appointment.patient else None
+            )
+            data["doctor_name"] = (
+                f"{appointment.user.first_name} {appointment.user.last_name}"
+                if appointment.user else None
+            )
+            result.append(data)
+
+        return make_response(result, 200)
+
     
     
     def patch(self,id):
         appointment=Appointment.query.filter_by(id=id).first()
         if appointment:
             data=request.get_json()
+            
+            if "appointment_datetime" in data:
+                appointment.appointment_datetime = datetime.fromisoformat(
+            data["appointment_datetime"].replace("Z", "")
+        )
             for attr in data:
-                if attr in ['appointment_datetime','status','reason']:
+                if attr in ['status','reason']:
                     setattr(appointment,attr,data.get(attr))
                 if attr == "patient_id":
                     patient = db.session.get(Patient, data[attr])
@@ -219,9 +238,9 @@ class Appointment_byId(Resource):
                     user = db.session.get(User, data[attr])
                     if not user:
                         return make_response({"msg": "user does not exist"}, 404)
-                db.session.add(appointment)
-                db.session.commit()
-                return make_response(appointment.to_dict(),200)
+            db.session.add(appointment)
+            db.session.commit()
+            return make_response(appointment.to_dict(),200)
         return make_response({"msg":"appointment not found"},404)
 
     def delete(self,id):
