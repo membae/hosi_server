@@ -67,9 +67,21 @@ class Report(db.Model,SerializerMixin):
     
     patient=db.relationship("Patient", back_populates='reports')
     user=db.relationship("User", back_populates='reports')
+    images=db.relationship("Images",back_populates="report")
     
-    serialize_rules = ("-patient", "-user")
+    serialize_rules = ( "-patient.reports","-user.reports",)
     
+    
+class Images(db.Model,SerializerMixin):
+    __tablename__='images'
+    
+    id=db.Column(db.Integer, primary_key=True)
+    image_url=db.Column(db.String, nullable=False)
+    report_id=db.Column(db.Integer,db.ForeignKey('reports.id'), nullable=False)
+    
+    report=db.relationship("Report", back_populates="images")
+    
+    serialize_rules = ("-report.images",)
     
         
               
