@@ -280,8 +280,35 @@ class GetReports(Resource):
 api.add_resource( GetReports, "/reports")
         
         
-
-
+class Report_byId(Resource):
+    def get(self,id):
+        report=Report.query.filter_by(id=id).first()
+        if report:
+            return make_response(report.to_dict(),200)
+        return make_response({"msg":"report with that id does not exist"},404)
+    
+    
+    def patch(self,id):
+        report=Report.query.filter_by(id=id).first()
+        if report:
+            data=request.get_json()
+            for attr in data:
+                if attr in ['diagnosis','patient_id','user_id']:
+                    setattr(report,attr,data.get(attr))
+            db.session.add(report)
+            db.session.commit()
+            return make_response(report.to_dict(),200)
+        return make_response({"msg":"report not found"},404)
+    
+    
+    def delete(self,id):
+        report=Report.query.filter_by(id=id).first()
+        if report:
+            db.session.delete(report)
+            db.session.commit()
+            return make_response({"msg":"report deleted succesfully"},200)
+        return make_response({"msg":"report does not exist"},404)
+api.add_resource(Report_byId,'/reports/<int:id>')
 
 
 if __name__=="__main__":
