@@ -72,7 +72,7 @@ class Report(db.Model,SerializerMixin):
     serialize_rules = ( "-patient.reports","-user.reports",)
     
     
-class Images(db.Model,SerializerMixin):
+class Images(db.Model,SerializerMixin):#added this to the db
     __tablename__='images'
     
     id=db.Column(db.Integer, primary_key=True)
