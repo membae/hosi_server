@@ -1,4 +1,4 @@
-from models import db, User, Patient, Appointment, Report
+from models import db, User, Patient, Appointment, Report, Images
 from flask_migrate import Migrate
 from flask import Flask, request, make_response, jsonify
 from flask_restful import Api, Resource
@@ -8,10 +8,20 @@ from werkzeug.security import check_password_hash,generate_password_hash
 import os,secrets, datetime
 from datetime import timedelta, datetime
 
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATABASE = os.environ.get(
     "DB_URI", f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}")
+
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static')
+ALLOWED_EXTENSIONS=set(['png','jpeg','jpg'])
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit(".",1)[1].lower() in ALLOWED_EXTENSIONS
+
 app = Flask(__name__)
 CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE
@@ -19,12 +29,19 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] =secrets.token_hex(32)
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
+app.config['UPLOAD_FOLDER']=UPLOAD_FOLDER
 
 migrate = Migrate(app, db)
 
 db.init_app(app)
 api=Api(app)
 jwt=JWTManager(app)
+
+cloudinary.config(
+    cloud_name="dia2le5vz",
+    api_key="716219668214133",
+    api_secret="12Wn1cP9Wc_cZb6gFWMe2tdvHWQ"
+)
 
 class Home(Resource):
     def get(self):
@@ -259,21 +276,67 @@ class GetReports(Resource):
         return make_response([report.to_dict() for report in reports],200)
     
     def post(self):
-        data=request.get_json()
-        if not data:
-            return make_response({"msg":"no data provided"},400)
-        if "patient_id" in data and "user_id" in data and "diagnosis" in data:
-            patient=Patient.query.get(data['patient_id'])
-            user=User.query.get(data['user_id'])
-            if not patient:
-                return make_response({"msg":"patient does not exist"},404)
-            if not user:
-                return make_response({"msg":"user does not exist"},404)
-            new_report=Report(patient_id=data.get("patient_id"), user_id=data.get("user_id"),diagnosis=data.get("diagnosis"))
+        data = request.form
+
+        patient_id = data.get("patient_id")
+        user_id = data.get("user_id")
+        diagnosis = data.get("diagnosis")
+
+        image_files = request.files.getlist("images")
+
+
+        # Validation
+        if not patient_id or not user_id or not diagnosis:
+            return make_response(
+                {"msg": "patient_id, user_id and diagnosis are required"},
+                400
+            )
+
+        if not image_files:
+            return make_response(
+                {"msg": "At least one image is required"},
+                400
+            )
+
+        patient = Patient.query.get(patient_id)
+        if not patient:
+            return make_response({"msg": "Patient not found"}, 404)
+
+        user = User.query.get(user_id)
+        if not user:
+            return make_response({"msg": "User not found"}, 404)
+
+        try:
+            new_report = Report(
+                patient_id=patient_id,
+                user_id=user_id,
+                diagnosis=diagnosis
+            )
+
             db.session.add(new_report)
+            db.session.flush()  # get ID before commit
+
+            uploaded_urls = []
+
+            for image in image_files:
+                upload_result = cloudinary.uploader.upload(image)
+                uploaded_urls.append(upload_result["secure_url"])
+
+            for url in uploaded_urls:
+                db.session.add(
+                    Images(image_url=url, report_id=new_report.id)
+                )
+
             db.session.commit()
-            return make_response(new_report.to_dict(),201)
-        return make_response({"msg":"Missing field"},400)
+
+            return make_response(new_report.to_dict(), 201)
+
+        except Exception as e:
+            db.session.rollback()
+            return make_response(
+                {"msg": "Failed to create report", "error": str(e)},
+                500
+            )
     
     
     
