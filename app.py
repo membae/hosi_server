@@ -351,17 +351,46 @@ class Report_byId(Resource):
         return make_response({"msg":"report with that id does not exist"},404)
     
     
-    def patch(self,id):
-        report=Report.query.filter_by(id=id).first()
-        if report:
-            data=request.get_json()
-            for attr in data:
-                if attr in ['diagnosis','patient_id','user_id']:
-                    setattr(report,attr,data.get(attr))
-            db.session.add(report)
+    def patch(self, id):
+        report = db.session.get(Report, id)
+        if not report:
+            return make_response({"msg": "report not found"}, 404)
+
+        data = request.form
+        json_data = request.form or {}
+        image_files = request.files.getlist("images")
+        replace_images = data.get("replace_images", "false").lower() == "true"
+
+        try:
+            # Update report fields
+            for attr in ['diagnosis', 'patient_id', 'user_id']:
+                if attr in data:
+                    setattr(report, attr, data.get(attr))
+
+            # Replace images if requested
+            if replace_images:
+                Images.query.filter_by(report_id=report.id).delete()
+
+            # Upload and attach new images
+            for image in image_files:
+                upload_result = cloudinary.uploader.upload(image)
+                db.session.add(
+                    Images(
+                        image_url=upload_result["secure_url"],
+                        report_id=report.id
+                    )
+                )
+
             db.session.commit()
-            return make_response(report.to_dict(),200)
-        return make_response({"msg":"report not found"},404)
+            return make_response(report.to_dict(), 200)
+
+        except Exception as e:
+            db.session.rollback()
+            return make_response(
+                {"msg": "Failed to update report", "error": str(e)},
+                500
+            )
+
     
     
     def delete(self,id):
